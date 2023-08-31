@@ -1,0 +1,170 @@
+# 以下、実行したいクエリのみのコメントアウトを解除して実行する
+
+# エンドポイント: https://snowtooth.moonhighway.com/
+
+# 複数のフィールドに対してクエリを投げることが可能
+# キーを指定することでその名前をキーしてバリューを取得することできる(指定しない場合はそのままのフィールド名になる)
+# query liftsAndTrails {
+#   open: liftCount(status: OPEN)
+#   lifts: allLifts(status: CLOSED) {
+#     id
+#     name
+#     status
+#   }
+#   allTrails {
+#     name
+#     difficulty
+#   }
+# }
+
+# query jazzCatStatus {
+#   Lift(id: "jazz-cat") {
+#     id
+#     name
+#     night
+#     capacity
+#     elevationGain
+#   }
+# }
+
+# query trailsAccessedByJazzCat {
+#   Lift(id: "jazz-cat") {
+#     capacity
+#     trailAccess {
+#       id
+#       name
+#       difficulty
+#     }
+#   }
+# }
+
+# # フラグメント
+# fragment を使用することで特定の型に対する特定のフィールドを持った選択セットを複数の箇所で再利用できる
+# fragment <フラグメント名> on <型名> { <内容> }
+# query liftAndTrail {
+#   Lift(id: "jazz-cat") {
+#     ...liftInfo
+#     trailAccess {
+#       ...trailInfo
+#     }
+#   }
+#   Trail(id: "river-run") {
+#     ...trailInfo
+#   }
+# }
+
+# フラグメントは入れ子にすることも可能
+# fragment trailInfo on Trail {
+#   name
+#   difficulty
+#   accessedByLifts {
+#     ...liftInfo
+#   }
+# }
+
+# fragment liftInfo on Lift {
+#   name
+#   status
+#   capacity
+#   night
+#   elevationGain
+# }
+
+# # ユニオン型
+# エンドポイント: https://graphqlbin.com/v2/ANgjtr <= なんか呼べない
+# 複数のオブジェクトを含みうるリストを取得する場合にそのオブジェクトに型に応じて取得する選択セットを選ぶことができる(ユニオン型)
+# ちなみに以下はインラインフラグメント(名前を持たないフラグメント)
+# query schedule {
+#   agenda {
+#     ... on Workout {
+#       name
+#       reps
+#     }
+#     ... on StudyGroup {
+#       name
+#       subject
+#       students
+#     }
+#   }
+# }
+
+# 名前付きのフラグメントでも同様のことが可能
+# query schedule2 {
+#   agenda {
+#     ...workOutInfo
+#     ...studyGroupInfo
+#   }
+# }
+
+# fragment workOutInfo on Workout {
+#   name
+#   reps
+# }
+# fragment studyGroupInfo on StudyGroup {
+#   name
+#   reps
+# }
+
+# # インターフェース
+# インターフェースと呼ばれる類似のオブジェクトが実装すべきフィールドを指定する抽象型を定義し、
+# インターフェースを実装する型にそのフィールドを強制することができる(型定義は多分皇族で記述する)
+# それを利用して以下のように共通のフィールドとある特定の型だけに表示させるフィールドを指定できる
+# query schedule3 {
+#   agenda {
+#     name
+#     start
+#     end
+#     ... on Workout {
+#       reps
+#     }
+#   }
+# }
+
+# # イントロスペクション
+# APIスキーマの詳細を取得できる機能
+# __schema でスキーマ全体の中の特定の内容を確認できる
+# query {
+#   __schema {
+#     types {
+#       name
+#       description
+#     }
+#   }
+# }
+
+# __type で特定の型の特定の内容を確認できる
+# query liftDetails {
+#   __type(name: "Lift") {
+#     name
+#     fields {
+#       name
+#       description
+#       type {
+#         name
+#       }
+#     }
+#   }
+# }
+
+# 各種ルート型に定義されている型を確認したければ以下のようにすると良い
+# query roots {
+#   __schema {
+#     queryType {
+#       ...typeField
+#     }
+#     mutationType {
+#       ...typeField
+#     }
+#     subscriptionType {
+#       ...typeField
+#     }
+#   }
+# }
+
+# fragment typeField on __Type {
+#   name
+#   fields {
+#     name
+#     description
+#   }
+# }

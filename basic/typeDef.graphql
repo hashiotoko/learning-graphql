@@ -1,0 +1,221 @@
+# # スカラー型
+# 組み込みのスカラー型にもカスタムスカラー型として定義できる
+scalar DateTime
+
+# # Enum 型
+enum PhotoCategory {
+  SELFIE
+  PORTRAIT
+  ACTION
+  LANDSCAPE
+}
+
+# # コネクション(接続)
+# 多対多の例
+type User {
+  id: ID!
+  name: String!
+  avatar: String
+  inPhotos: [Photo!]!
+}
+
+type Photo {
+  id: ID!
+  name: String!
+  created: DateTime!
+  category: PhotoCategory!
+  taggedUsers: [User!]!
+}
+
+# # スルー(through)型
+# 多対多の接続を構築する際に関係自体に意味を持たせたい場合に新たなエッジとして構築するオブジェクト型
+type User2 {
+  id: ID!
+  name: String!
+  avatar: String
+  friends: [Friendship!]!
+}
+
+type Friendship {
+  friend_a: User2!
+  friend_b: User2!
+  howLong: Int!
+}
+
+# # ユニオン型
+union AgendaItem = StudyGroup | Workout
+
+type StudyGroup {
+  name: String!
+  subject: String
+  students: [User!]!
+}
+
+type Workout {
+  name: String!
+  reps: Int!
+}
+
+# (ルート型であるクエリ型に定義)
+type Query {
+  agenda: [AgendaItem!]!
+}
+
+# # インターフェース
+interface AgendaItem2 {
+  name: String!
+  start: DateTime!
+  end: DateTime!
+}
+
+type StudyGroup2 implements AgendaItem {
+  name: String!
+  start: DateTime!
+  end: DateTime!
+  participants: [User!]!
+  topic: String!
+}
+
+type Workout2 implements AgendaItem {
+  name: String!
+  start: DateTime!
+  end: DateTime!
+  reps: Int!
+}
+
+# クエリ型はユニオン型と同様
+
+# # 引数
+# リストのフィルタリングやソート、ページングなどを行うために特定のフィールドに引数を定義することができる
+
+# ## フィルタリング
+type Query {
+  ....
+  User(id: ID!): User!
+  Photo(id: ID!): Photo!
+  allPhotos(category: PhotoCategory): [Photo!]! # 指定されない場合は全てが返される
+}
+
+# ## ページング
+# 以下の例では first で件数(初期値50)、start で取得(インデックス)の開始位置(初期値0)を指定できる
+type Query {
+  ....
+  allUsers(
+    first: Int = 50
+    start: Int = 0
+  ): [User!]!
+}
+
+# ## ソート
+enum SortDirection {
+  ASCENDING
+  DESCENDING
+}
+
+enum SorablePhotoField {
+  name
+  description
+  category
+  created
+}
+
+type Query {
+  allPhotos(
+    sort: SortDirection = DESCENDING
+    sortBy: SorablePhotoField = created
+  ): [Photo!]!
+}
+
+# # ミューテーション
+type Mutation {
+  postPhoto(
+    name: String!
+    description: String
+    category: PhotoCategory = PORTRAIT
+  ): Photo!
+}
+
+# # 入力型
+# 引数が多い時にそれらをまとめるオブジェクトっぽい型
+# 引数としてしか利用できないのでオブジェクト型ではない
+
+input PostPhotoInput {
+  name: String!
+  description: String
+  category: PhotoCategory = PORTRAIT
+}
+
+type Mutation {
+  postPhoto(input: PostPhotoInput): Photo!
+}
+
+# mutation 叩く型では以下のようになる
+mutation newPhoto($input: PostPhotoInput!) {
+  postPhoto(input: $input) {
+    id
+    name
+    created
+  }
+}
+
+# 引数のデータとしては以下のようにしなければならない
+# {
+#   "input": {
+#     "name": "Mt.Fuji",
+#     "description": "The landscape of the Mt.Fuji."
+#     "category": "LANDSCAPE"
+#   }
+# }
+
+# # 返却型
+# mutationの処理の後に複数の要素を返したい場合に使用できるオブジェクト型
+
+type AuthPayload {
+  user: User!
+  token: String!
+}
+
+type Mutation {
+  ...
+  githubAuth(code: String!): AuthPayload!
+}
+
+# # サブスクリプション
+# (newPhotoのように)特定のフィルタリングをかけてのサブスクも可能
+type Subscription {
+  newPhoto(category: PhotoCategory): Photo!
+  newUser: User!
+}
+
+# # スキーマ
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+# # スキーマのドキュメント化(イントロスペクションの有効化)
+
+"""
+ユーザー
+"""
+type User {
+  """
+  ユーザーID
+  """
+  id: ID!
+  """
+  ユーザーの名前
+  """
+  name: String!
+}
+
+type Mutation {
+  """
+  Githubユーザーで認可
+  """
+  githubAuth(
+    "ユーザーの認可のために送信されるGithubの一意のコード"
+    code: String!
+  ): AuthPayload!
+}
